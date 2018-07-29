@@ -1,4 +1,4 @@
-Do we allow for in-season trades, etc.?
+## Fantasy Football Modeling for 2018 Season ##
 
 Need to know the schedule to understand bye weeks and match difficulties.
 
