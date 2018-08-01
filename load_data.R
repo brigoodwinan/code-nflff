@@ -10,7 +10,7 @@ library(reshape2)
 library(tidyr)
 library(stringr)
 
-df <- fromJSON(txt = "../data/games_1512362753.8735218.json",flatten = TRUE) %>% as_data_frame()
+df <- fromJSON(txt = "../data/games_1512362753.8735218.json",flatten = TRUE) %>% as_data_frame() %>% mutate(date=as.Date(date))
 save(df,file = "../data/games.RData")
 
 profdf <- fromJSON(txt = "../data/profiles_1512362725.022629.json",flatten = TRUE) %>% as_data_frame()
@@ -46,3 +46,10 @@ elo <- elo %>% mutate(date=as.Date(paste0(as.character(yr),"-",as.character(mo),
 
 save(elo,file = "../data/teamElo.RData")
 
+# Season
+sched <- read.csv(file = "../data/schedule_2018.csv",stringsAsFactors = FALSE) %>% as_data_frame()
+save(sched,file = "../data/schedule_2018.RData")
+
+# Team abbreviations
+abbrConv <- read.csv(file = "../data/teamAbbreviationConversions.csv",stringsAsFactors = FALSE) %>% as_data_frame()
+save(abbrConv,file = "../data/teamAbbreviationConversions.RData")
