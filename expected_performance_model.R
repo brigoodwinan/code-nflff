@@ -30,5 +30,25 @@ team <- team %>% filter(date>as.Date("2015-05-01")) %>% left_join(abbrConv,by=c(
 # tmp <- redelo %>% filter(date>as.Date("2015-01-01")) %>% distinct(tname) %>% dplyr::rename(team=tname)
 # tmp <- rbind(tmp1,tmp) %>% distinct(team) %>% write.csv(file = "../data/distinctTeamNames.csv")
 
+load("../data/newElos.RData")
+teamElo$date <- as.Date(teamElo$date)
+
+finElo <- teamElo %>% group_by(team1) %>% slice(which.max(date))
+
+finElo <- finElo %>% select(team1,elo1)
+
+teamElo <- teamElo %>% select
 mdl <- glm(data = team,formula = game_won ~ game_location + teamElo + oppElo,family = "binomial")
+
+load("../data/schedule_2018.RData")
+
+sch <- melt(data = sched,id.vars = c(1),variable.name = "GameNum",value.name = "OPP")
+
+sch$home <- 1
+sch$home[str_detect(string = sch$OPP,pattern = "@")] <- 0
+sch$OPP <- str_remove(sch$OPP,"@")
+sch <- sch %>% select(-GameNum)
+
+sch <- sch %>% left_join(finElo,by=c("TEAM"="team1")) %>% dplyr::rename(TEAMELO=elo1)
+sch <- sch %>% left_join(finElo,by=c("OPP"="team1")) %>% dplyr::rename(OPPELO=elo1)
 
