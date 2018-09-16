@@ -28,8 +28,6 @@ res <- dbSendQuery(conn, q)
 sched <- dbFetch(res) %>% as_data_frame()
 dbClearResult(res)
 
-
-
 # Disconnect
 dbDisconnect(conn)
 
