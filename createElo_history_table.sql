@@ -12,5 +12,5 @@ GameDate date
 ,elo_prob1 decimal(11,10)
 ,score1 int
 ,score2 int
-,result1 boolean
+,result1 decimal(2,1)
 );
