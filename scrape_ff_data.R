@@ -52,6 +52,9 @@ for (i in wk)
 # # Temporary save 
 # save(fin,finK,finDST,file = "../data/ff_data_week1_week2.RData")
 
+## Find teams in team string
+conn <- dbConnect(RMariaDB::MariaDB(), group = "rs-dbi") # nflff database
+
 for (k in pos)
 {
   Sys.sleep(2.25+runif(1))
@@ -64,8 +67,6 @@ for (k in pos)
   tmp <- tmp[-1,]
   colnames(tmp) <- cns
   
-  ## Find teams in team string
-  conn <- dbConnect(RMariaDB::MariaDB(), group = "rs-dbi") # nflff database
   q <- paste0("
               SELECT * 
               FROM FootballdbdotcomTeamAbbrv;
@@ -73,7 +74,7 @@ for (k in pos)
   res <- dbSendQuery(conn, q)
   ta <- dbFetch(res) %>% as_data_frame()
   dbClearResult(res)
-  dbDisconnect(conn)
+  
   uabbv <- unique(ta$team)
   theteam <- lapply(uabbv,function(X){str_detect(tmp[,1],X)})
   
@@ -85,4 +86,19 @@ for (k in pos)
   
   pointsAgainst <- data_frame(ref = teamnameref,team = uabbv) %>% left_join(ta,by=c("team"="team")) %>% right_join(tmp,by=c("ref"="team")) %>% select(-ref,-team) %>% dplyr::rename(team=conv)
   
+  # Insert into respective table in mysql.
+  pointsAgainst$datestamp <- Sys.Date()
+  
+  # # For initial building of the table schemas and models
+  # colnames(pointsAgainst) %>% t() %>% t() %>% write.csv(file = paste0("~/Desktop/",k,".csv"))
+  
+  # For Kicker columns
+  if (k=="K")
+  {
+    colnames(pointsAgainst) <- str_remove(colnames(pointsAgainst),"\\+")  
+  }
+  
+  dbWriteTable(conn, value = pointsAgainst, name = paste0("pointsAgainst_",k), append = TRUE )
+  
 }
+dbDisconnect(conn)
