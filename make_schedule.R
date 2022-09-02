@@ -1,6 +1,6 @@
 # make_schedule.R
 
-
+library(tidyverse)
 library(plyr)
 library(dplyr)
 library(reshape2)
@@ -12,17 +12,18 @@ LOAD__ <- FALSE
 
 if (LOAD__)
 {
-    sched <- read.csv(file = "../data/schedule_2019.csv", stringsAsFactors = FALSE)
-    save(sched, file = "../data/schedule_2019.RData")    
+  ofilename <- "./data/schedule2021.RData"
+  sched <- read_csv('./data/schedule2021.csv')
+  save(sched, file = ofilename)    
 }
 
-load("../data/schedule_2019.RData")
+load(ofilename)
 
-sch <- melt(data = sched,id.vars = c(1),variable.name = "GameNum",value.name = "OPP")
+sch <- melt(data = sched,id.vars = c(1),variable.name = "GameNum",value.name = "OPP", factorsAsStrings = TRUE) %>% as_tibble()
 
 sch$home <- 1
-sch$home[str_detect(string = sch$OPP,pattern = "@")] <- 0
-sch$GameNum <- str_remove(string = sch$GameNum,pattern = "X") %>% as.integer()
+sch$home[str_detect(string = sch$OPP, pattern = "@")] <- 0
+sch <- sch %>% group_by(Team) %>% mutate(GameNum = seq(n())) %>% ungroup()
 sch$OPP <- str_remove(sch$OPP,"@")
 
 # # DO NOT RUN because it reduces the schedule down too much
@@ -36,4 +37,4 @@ sch$OPP <- str_remove(sch$OPP,"@")
 # dbWriteTable(conn, value = sch, name = "schedule_2018", append = TRUE )
 # dbDisconnect(conn)
 
-save(sch, file = "../data/schedule_fin_2019.RData")
+save(sch, file = "./data/schedule_fin_2021.RData")

@@ -12,42 +12,51 @@
 # acquired. The MDL near the end of this script uses a few years of a games to
 # build a model that predicts w/l based on ELOs and away/home.
 
-library(dplyr)
 library(reshape2)
-library(tidyr)
-library(stringr)
+library(tidyverse)
 
-load("../data/games.RData") # df
-load("../data/teamElo.RData") # elo
-load("../data/teamAbbreviationConversions.RData") # abbrConv
-load("../data/newElos_2018.RData") # teamElo
-load("../data/schedule_fin_2019.RData") # sch
+df <- read_csv('./data/nfl_elo_latest copy.csv')
+load('./data/newElos_2021.RData') # teamElo
+load('./data/schedule2021.RData') # sch
 
-sch <- as_tibble(sch)
+df <- df %>% mutate(date = as.Date(date,format = "%m/%d/%y")) %>% 
+  transmute(elo1 = elo1_pre, elo2=elo2_pre,home=sample(c(1,0),n(),replace = TRUE),W=score1 > score2)
+df$tmp <- df$elo2
+logind <- df$home==0
+df$elo2[logind] <- df$elo1[logind]
+df$elo1[logind] <- df$tmp[logind]
+df$W[logind] <- !df$W[logind]
+df <- df %>% select(-tmp)
+df <- df %>% mutate(home = as.logical(home))
 
-team <- df %>% distinct(date,team,game_location,opponent,game_won)
+mdl <- glm(data = df, formula = W ~ home + elo1 + elo2, family = "binomial")
 
-redelo <- elo %>% distinct(tname,elo,date) %>% left_join(abbrConv,by=c("tname"="team")) %>% select(-tname) %>% dplyr::rename(team=conv)
+teamElo <- teamElo %>% transmute(team,elo)
 
-team <- team %>% filter(date>as.Date("2015-05-01") & game_location!="N") %>% left_join(abbrConv,by=c("team"="team")) %>% select(-team) %>% dplyr::rename(team=conv) %>%
-    left_join(abbrConv,by=c("opponent"="team")) %>% select(-opponent) %>% dplyr::rename(opponent=conv) %>% 
-    left_join(redelo,by=c("date"="date","team"="team")) %>% dplyr::rename(teamElo=elo) %>% 
-    left_join(redelo,by=c("date"="date","opponent"="team")) %>% dplyr::rename(oppElo=elo)
+dat <- sch %>% left_join(teamElo, by = c("Team"="team")) %>% rename(elo1=elo)
+dat <- dat %>% left_join(teamElo, by = c("OPP"="team")) %>% rename(elo2=elo)
+dat[is.na(dat)] <- 1500
+dat$home <- as.logical(dat$home)
+dat <- dat %>% filter(OPP != "BYE")
+dat$pwin <- predict(mdl,dat,type='response')
 
-teamElo$date <- as.Date(teamElo$date)
+dat <- dat %>% group_by(Team) %>% summarise(outcome = sum(log(pwin)),.groups='drop') %>% arrange(desc(outcome))
 
-finElo <- teamElo %>% group_by(team1) %>% slice(which.max(date))
+write_csv(dat, './data/outcome2021.csv')
 
-finElo <- finElo %>% select(team1,elo1)
-
-mdl <- glm(data = team,formula = game_won ~ game_location + teamElo + oppElo,family = "binomial")
-
-print(summary(mdl))
-
-sch <- sch %>% left_join(finElo,by=c("TEAM"="team1")) %>% dplyr::rename(teamElo=elo1)
-sch <- sch %>% left_join(finElo,by=c("OPP"="team1")) %>% dplyr::rename(oppElo=elo1)
-
-sch <- sch %>% mutate(game_location = ifelse(home,"H","A")) %>% mutate(prob = predict(newdata = ., object = mdl, type = "response"))
-
-# FINAL OUTPUT
-sch %>% group_by(TEAM) %>% dplyr::summarise(outcome = sum(log(prob), na.rm = TRUE)) %>% arrange(desc(outcome)) %>% write.csv(file = paste0("../",Sys.Date(),"_outcome.csv"), row.names = FALSE)
+# 
+# finElo <- teamElo %>% group_by(team1) %>% slice(which.max(date))
+# 
+# finElo <- finElo %>% select(team1,elo1)
+# 
+# 
+# 
+# print(summary(mdl))
+# 
+# sch <- sch %>% left_join(finElo,by=c("TEAM"="team1")) %>% dplyr::rename(teamElo=elo1)
+# sch <- sch %>% left_join(finElo,by=c("OPP"="team1")) %>% dplyr::rename(oppElo=elo1)
+# 
+# sch <- sch %>% mutate(game_location = ifelse(home,"H","A")) %>% mutate(prob = predict(newdata = ., object = mdl, type = "response"))
+# 
+# # FINAL OUTPUT
+# sch %>% group_by(TEAM) %>% dplyr::summarise(outcome = sum(log(prob), na.rm = TRUE)) %>% arrange(desc(outcome)) %>% write.csv(file = paste0("../",Sys.Date(),"_outcome.csv"), row.names = FALSE)
