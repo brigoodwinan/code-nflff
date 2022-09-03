@@ -15,9 +15,13 @@
 library(reshape2)
 library(tidyverse)
 
-df <- read_csv('./data/nfl_elo_latest copy.csv')
+CURRENT_YEAR <- 2022
+
+# df <- read_csv('./data/nfl_elo_latest copy.csv')
+df <- write_parquet(df, paste0("./data/elo-data-thru", CURRENT_YEAR - 1, ".parquet"))
 load('./data/newElos_2021.RData') # teamElo
-load('./data/schedule2021.RData') # sch
+# load('./data/schedule2021.RData') # sch 
+sch <- read_parquet(paste0("./data/schedule_fin_", CURRENT_YEAR, ".parquet"))
 
 df <- df %>% mutate(date = as.Date(date,format = "%m/%d/%y")) %>% 
   transmute(elo1 = elo1_pre, elo2=elo2_pre,home=sample(c(1,0),n(),replace = TRUE),W=score1 > score2)
