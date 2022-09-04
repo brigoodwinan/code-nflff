@@ -1,3 +1,7 @@
+# Expected Outcomes for 2022 Season
+
+![outcome](https://github.com/brigoodwinan/code-nflff/blob/master/results/outcome.png)
+
 # Fantasy Football Modeling for 2018 Season 
 
 I rely a lot on data from 538: https://github.com/fivethirtyeight/nfl-elo-game
