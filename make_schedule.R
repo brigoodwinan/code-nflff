@@ -18,19 +18,19 @@ if (LOAD__) {
   load(ofilename)
 }
 
-sch <- melt(data = sched, id.vars = c(1), variable.name = "GameNum", value.name = "OPP", factorsAsStrings = TRUE) %>% as_tibble()
+sch <- melt(data = sched, id.vars = c(1), variable.name = "GameNum", value.name = "OPP", factorsAsStrings = TRUE) |> as_tibble()
 
 sch$home <- 1
 sch$home[str_detect(string = sch$OPP, pattern = "@")] <- 0
-sch <- sch %>%
-  group_by(TEAM) %>%
-  mutate(GameNum = seq(n())) %>%
+sch <- sch |>
+  group_by(TEAM) |>
+  mutate(GameNum = seq(n())) |>
   ungroup()
 sch$OPP <- str_remove(sch$OPP, "@")
 
 # # DO NOT RUN because it reduces the schedule down too much
-# sch <- sch %>% mutate(team1=ifelse(test = home==1,TEAM,OPP),team2=ifelse(test = home==0,TEAM,OPP))
-# sch <- sch %>% distinct(team1,team2,GameNum)
+# sch <- sch |> mutate(team1=ifelse(test = home==1,TEAM,OPP),team2=ifelse(test = home==0,TEAM,OPP))
+# sch <- sch |> distinct(team1,team2,GameNum)
 
 # # Connect to my-db as defined in ~/.my.cnf
 # conn <- dbConnect(RMariaDB::MariaDB(), group = "rs-dbi") # nflff database
