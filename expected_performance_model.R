@@ -26,9 +26,9 @@ load("./data/newElos_2021.RData") # teamElo
 sch <- read_parquet(paste0("./data/schedule_fin_", CURRENT_YEAR, ".parquet"))
 
 # as of 2021 anything with OAK needs to be changed to LV (Raiders moved to Las Vegas)
-df$team1[df$team1=="OAK"] <- "LV"
-df$team2[df$team2=="OAK"] <- "LV"
-teamElo$team[teamElo$team=="OAK"] <- "LV"
+df$team1[df$team1 == "OAK"] <- "LV"
+df$team2[df$team2 == "OAK"] <- "LV"
+teamElo$team[teamElo$team == "OAK"] <- "LV"
 teamElo <- teamElo |> transmute(team, elo)
 
 g <- function(indf, schedule, returnSchedule = FALSE) {
@@ -103,61 +103,30 @@ sch <- sch |>
 
 write_parquet(sch, paste0("./data/results_PredictedOutcomes_", CURRENT_YEAR, "parquet"))
 
-sch <- sch |> left_join(teamElo, by = c("TEAM"="team"))
-sch[c("outcome","elo")] <- scale(sch[c("outcome","elo")])
-sch <- sch |> mutate(diff = outcome-elo)
+# Plotting >>>>>>>>>>>>>
+sch <- sch |> left_join(teamElo, by = c("TEAM" = "team"))
+sch[c("outcome", "elo")] <- scale(sch[c("outcome", "elo")])
+sch <- sch |> mutate(diff = outcome - elo)
 
-# Plotting
-ggplot(sch, aes(x=reorder(TEAM,-outcome),y=outcome,label=TEAM)) +
-  geom_point(color="red",pch=19,size=3)+
-  geom_label_repel()+
-  theme_bw()+
-  theme(panel.grid.minor.y = element_blank(),
-        panel.grid.major.y = element_blank())
-  
-ggplot(sch) +
-  geom_point(aes(x=reorder(TEAM,-outcome),y=outcome), color="red",pch=19,size=3)+
-  geom_point(aes(x=reorder(TEAM,-outcome),y=elo), color="red",pch=1,size=3)+
-  # geom_label_repel(aes(x=reorder(TEAM,-outcome),y=outcome,label=TEAM),box.padding = .8)+
-  theme_bw()
-
-ggplot(sch) +
-  geom_point(aes(y=reorder(TEAM,outcome),x=outcome), color="red",pch=19,size=3)+
-  geom_point(aes(y=reorder(TEAM,outcome),x=elo), color="red",pch=1,size=3)+
-  theme_bw()+theme(axis.title.y = element_blank())
-  # geom_label_repel(aes(x=reorder(TEAM,-outcome),y=outcome,label=TEAM),box.padding = .8)+
-  
-
-tmp <- pivot_longer(sch,cols = c("outcome","elo"))
-tmp <- tmp |> left_join(tmp |> filter(name=="outcome") |> transmute(TEAM,outcome=value))
-tmp <- tmp |> left_join(sch[c("TEAM","diff")])
+tmp <- pivot_longer(sch, cols = c("outcome", "elo"))
+tmp <- tmp |> left_join(tmp |> filter(name == "outcome") |> transmute(TEAM, outcome = value))
+tmp <- tmp |> left_join(sch[c("TEAM", "diff")])
 tmp$linecolor <- tmp$diff > 0
 
-ggplot(tmp)+
-  geom_point(aes(x=value,y=reorder(TEAM,outcome),pch=name), color="black", size=3)+
-  scale_shape_manual(values = c(1,19))+
-  geom_line(aes(x=value,y=reorder(TEAM,outcome),group=TEAM,color=linecolor))+
-  scale_color_manual(values = c("red","black"))+
-  theme_bw()+
-  theme(axis.title.y = element_blank(),
-        legend.position = "none",
-        panel.grid.minor.x = element_blank(),
-        panel.grid.major.x = element_blank())
-  
-
-#
-# finElo <- teamElo |> group_by(team1) |> slice(which.max(date))
-#
-# finElo <- finElo |> select(team1,elo1)
-#
-#
-#
-# print(summary(mdl))
-#
-# sch <- sch |> left_join(finElo,by=c("TEAM"="team1")) |> dplyr::rename(teamElo=elo1)
-# sch <- sch |> left_join(finElo,by=c("OPP"="team1")) |> dplyr::rename(oppElo=elo1)
-#
-# sch <- sch |> mutate(game_location = ifelse(home,"H","A")) |> mutate(prob = predict(newdata = ., object = mdl, type = "response"))
-#
-# # FINAL OUTPUT
-# sch |> group_by(TEAM) |> dplyr::summarise(outcome = sum(log(prob), na.rm = TRUE)) |> arrange(desc(outcome)) |> write.csv(file = paste0("../",Sys.Date(),"_outcome.csv"), row.names = FALSE)
+ggplot(tmp) +
+  geom_line(aes(x = value, y = reorder(TEAM, outcome), group = TEAM, color = linecolor)) +
+  scale_color_manual(values = c("red", "black")) +
+  geom_point(aes(x = value, y = reorder(TEAM, outcome), pch = name), color = "black", size = 3) +
+  scale_shape_manual(values = c(1, 19)) +
+  scale_y_discrete(position = "right") +
+  theme_bw() +
+  xlab("Expected Team Performance (Arbitrary Scale)") +
+  theme(
+    axis.title.y = element_blank(),
+    legend.position = c(.1, .5),
+    legend.box.background = element_rect(color = "black"),
+    legend.title = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank()
+  ) +
+  guides(color = "none")
