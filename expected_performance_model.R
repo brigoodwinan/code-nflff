@@ -18,6 +18,7 @@ library(reshape2)
 library(tidyverse)
 library(ggplot2)
 library(ggrepel)
+library(arrow)
 
 CURRENT_YEAR <- 2022
 
@@ -104,19 +105,21 @@ sch <- sch |>
 write_parquet(sch, paste0("./data/results_PredictedOutcomes_", CURRENT_YEAR, "parquet"))
 
 # Plotting >>>>>>>>>>>>>
+sch <- read_parquet(paste0("./data/results_PredictedOutcomes_", CURRENT_YEAR, "parquet"))
+sch <- sch |> rename(pred=outcome)
 sch <- sch |> left_join(teamElo, by = c("TEAM" = "team"))
-sch[c("outcome", "elo")] <- scale(sch[c("outcome", "elo")])
-sch <- sch |> mutate(diff = outcome - elo)
+sch[c("pred", "elo")] <- scale(sch[c("pred", "elo")])
+sch <- sch |> mutate(diff = pred - elo)
 
-tmp <- pivot_longer(sch, cols = c("outcome", "elo"))
-tmp <- tmp |> left_join(tmp |> filter(name == "outcome") |> transmute(TEAM, outcome = value))
+tmp <- pivot_longer(sch, cols = c("pred", "elo"))
+tmp <- tmp |> left_join(tmp |> filter(name == "pred") |> transmute(TEAM, pred = value))
 tmp <- tmp |> left_join(sch[c("TEAM", "diff")])
 tmp$linecolor <- tmp$diff > 0
 
-ggplot(tmp) +
-  geom_line(aes(x = value, y = reorder(TEAM, outcome), group = TEAM, color = linecolor)) +
+plt <- ggplot(tmp) +
+  geom_line(aes(x = value, y = reorder(TEAM, pred), group = TEAM, color = linecolor)) +
   scale_color_manual(values = c("red", "black")) +
-  geom_point(aes(x = value, y = reorder(TEAM, outcome), pch = name), color = "black", size = 3) +
+  geom_point(aes(x = value, y = reorder(TEAM, pred), pch = name), color = "black", size = 3) +
   scale_shape_manual(values = c(1, 19)) +
   scale_y_discrete(position = "right") +
   theme_bw() +
@@ -130,3 +133,5 @@ ggplot(tmp) +
     panel.grid.major.x = element_blank()
   ) +
   guides(color = "none")
+
+ggsave("./results/outcome.png",plot = plt, device = "png",width = 7.5,height = 5, dpi = 300,units = "in")
